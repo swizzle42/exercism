@@ -1,1 +1,6 @@
 .env
+
+build/
+test/
+
+devcontainer-lock.json
