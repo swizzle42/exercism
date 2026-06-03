@@ -1,7 +1,6 @@
 #include "sieve.h"
 
 #include <algorithm>
-#include <iostream>
 
 namespace sieve
 {
