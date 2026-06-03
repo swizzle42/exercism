@@ -1,51 +1,41 @@
 #include "sieve.h"
 
-#include <algorithm>
-
 namespace sieve
 {
 
     // TODO: add your solution here
     std::vector<int> primes(int n)
     {
-        std::vector<int> return_primes{};
+
         if (n < 2)
         {
-            return return_primes;
+            return {};
         }
 
-        // initialise the numbers vector
-        std::vector<number> v(n - 1);
-        std::generate(v.begin(), v.end(),
-                      [n = 2]() mutable
-                      { return number{n++, false}; });
+        // initialise the marked vector
+        std::vector<bool> marked_primes(n + 1, true);
+        marked_primes[0] = marked_primes[1] = false;
 
-        for (auto it = v.begin(); it != v.end(); ++it)
+        for (int i = 2; i <= n; ++i)
         {
-            // if a number is already marked, skip it
-            if (it->marked)
+            if (marked_primes[i])
             {
-                continue;
-            }
-
-            // otherwise, it is prime so mark of all greater multiples
-            auto mults = it + it->value;
-            for (; mults < v.end(); mults += it->value)
-            {
-                mults->marked = true;
+                for (int j = i + i; j <= n; j += i)
+                {
+                    marked_primes[j] = false;
+                }
             }
         }
 
-        // now we extract the non-marked numbers
-        for (auto &num : v)
+        std::vector<int> nums{};
+        for (int i = 2; i <= n; ++i)
         {
-            if (!num.marked)
+            if (marked_primes[i])
             {
-                return_primes.push_back(num.value);
+                nums.push_back(i);
             }
         }
-
-        return return_primes;
+        return nums;
     }
 
 } // namespace sieve
