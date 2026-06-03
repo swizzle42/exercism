@@ -1,7 +1,5 @@
 #include "simple_linked_list.h"
 
-#include <iostream>
-#include <memory>
 #include <stdexcept>
 
 namespace simple_linked_list
@@ -10,23 +8,17 @@ namespace simple_linked_list
     std::size_t List::size() const
     {
         // TODO: Return the correct size of the list.
-        std::size_t element_count = 0;
-        auto elem = head;
-        while (elem != nullptr)
-        {
-            ++element_count;
-            elem = elem->next;
-        };
-        return element_count;
+        return current_size;
     }
 
     void List::push(int entry)
     {
         // TODO: Implement a function that pushes an Element with `entry` as data to
         // the front of the list.
-        auto new_head = new Element(entry);
-        new_head->next = head;
-        head = new_head;
+        auto element = std::unique_ptr<Element>(new Element(entry));
+        element->next = std::move(head);
+        head = std::move(element);
+        current_size++;
     }
 
     int List::pop()
@@ -39,10 +31,9 @@ namespace simple_linked_list
             throw std::domain_error("Trying to pop from an empty List.");
         }
 
-        auto old_head = head;
-        head = head->next;
-        int data = old_head->data;
-        delete old_head;
+        int data = head->data;
+        head = std::move(head->next);
+        current_size--;
         return data;
     }
 
@@ -50,32 +41,29 @@ namespace simple_linked_list
     {
         // TODO: Implement a function to reverse the order of the elements in the
         // list.
-        Element *prev = nullptr;
-        Element *current = head;
-        Element *next = nullptr;
 
-        while (current != nullptr)
+        std::unique_ptr<Element> reversed_head{nullptr};
+
+        while (head)
         {
-
-            next = current->next;   // store the next element
-            current->next = prev;   // swap next and previous
-            prev = current;         // move current to prev
-            current = next;         // update current to next
+            auto old_next = std::move(head->next);
+            auto current = std::move(head);
+            current->next = std::move(reversed_head);
+            reversed_head = std::move(current);
+            head = std::move(old_next);
         }
 
-        head = prev;    // update head to the last non-null element 
+        head = std::move(reversed_head);
     }
 
     List::~List()
     {
-        auto current = head;
-        while (current != nullptr)
+        while (head)
         {
-            auto next = current->next;
-            delete current;
-            current = next;
+            auto next = std::move(head->next);
+            head = std::move(next);
         }
-        
+
         head = nullptr;
     }
 

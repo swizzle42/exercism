@@ -1,36 +1,40 @@
 #pragma once
 
 #include <cstddef>
+#include <memory>
 
-namespace simple_linked_list {
+namespace simple_linked_list
+{
 
-class List {
-   public:
-    List() = default;
-    ~List();
+    class List
+    {
+    public:
+        List() = default;
+        ~List();
 
-    // Moving and copying is not needed to solve the exercise.
-    // If you want to change these, make sure to correctly
-    // free / move / copy the allocated resources.
-    List(const List&) = delete;
-    List& operator=(const List&) = delete;
-    List(List&&) = delete;
-    List& operator=(List&&) = delete;
+        // Moving and copying is not needed to solve the exercise.
+        // If you want to change these, make sure to correctly
+        // free / move / copy the allocated resources.
+        List(const List &) = delete;
+        List &operator=(const List &) = delete;
+        List(List &&) = delete;
+        List &operator=(List &&) = delete;
 
-    std::size_t size() const;
-    void push(int entry);
-    int pop();
-    void reverse();
+        std::size_t size() const;
+        void push(int entry);
+        int pop();
+        void reverse();
 
-   private:
-    struct Element {
-        Element(int data) : data{data} {};
-        int data{};
-        Element* next{nullptr};
+    private:
+        struct Element
+        {
+            Element(int data) : data{data} {};
+            int data{};
+            std::unique_ptr<Element> next{nullptr};
+        };
+
+        std::unique_ptr<Element> head{nullptr};
+        std::size_t current_size{0};
     };
 
-    Element* head{nullptr};
-    std::size_t current_size{0};
-};
-
-}  // namespace simple_linked_list
+} // namespace simple_linked_list
