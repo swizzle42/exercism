@@ -10,11 +10,10 @@ namespace alphametics
 
     // TODO: add your solution here
 
-    // type alias for result unordered map
-    typedef std::unordered_map<char, int> letter_value_map_t;
+    typedef std::unordered_map<char, int> puzzle_result_t;
 
     // alphametics solve function
-    std::optional<letter_value_map_t> solve(std::string);
+    std::optional<puzzle_result_t> solve(std::string);
 
 } // namespace alphametics
 

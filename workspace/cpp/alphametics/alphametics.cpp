@@ -3,12 +3,22 @@
 #include <set>
 #include <vector>
 #include <cctype>
+#include <cmath>
 #include <string>
+#include <stdexcept>
 
 namespace alphametics
 {
 
     // TODO: add your solution here
+
+    typedef struct
+    {
+        int value;
+        long long weight;
+    } token_value_t;
+
+    typedef std::unordered_map<char, token_value_t> token_map_t;
 
     // split the puzzle on whitespace and add each item to a vector
     std::vector<std::string> split_puzzle(std::string puzzle)
@@ -73,120 +83,62 @@ namespace alphametics
     }
 
     // get each character in the alphametic puzzle and an associated value
-    letter_value_map_t tokenise(const std::string &puzzle)
+    token_map_t tokenise(const std::string &puzzle)
     {
         auto unique = get_unique_letters(puzzle);
 
-        std::unordered_map<char, int> tokens{};
+        token_map_t tokens{};
         for (char c : unique)
         {
-            tokens.insert({c, 0});
+            token_value_t value{0, 0};
+            tokens.insert({c, value});
         }
 
         return tokens;
     }
 
-    bool validate_digits(const letter_value_map_t &tokens, const std::set<char> &primaries)
+    void generate_token_weights(token_map_t &tokens, const std::vector<std::string> &elements)
     {
-        std::set<int> used_digits{};
-        for (auto token : tokens)
+        for (size_t i = 0; i < elements.size() - 1; ++i)
         {
-            // if the token is primary and has zero value: invalid
-            if (primaries.count(token.first) && token.second == 0)
-            {
-                return false;
-            }
+            const std::string &elem = elements[i];
+            long long multiplier = 1;
 
-            // if the token has a value already in use: invalid
-            if (used_digits.count(token.second))
+            for (int j = static_cast<int>(elem.length()) - 1; j >= 0; --j)
             {
-                return false;
+                char c = elem[j];
+                tokens.at(c).weight += multiplier;
+                multiplier *= 10;
             }
-
-            // otherwise, the token is valid
-            used_digits.emplace(token.second);
         }
 
-        return true;
-    }
+        // the final element in elements vector is the rhs of the puzzle which has negative weight
+        const std::string &final_elem = elements.back();
+        long long multiplier = 1;
 
-    void initialise_token_values(letter_value_map_t &tokens, const std::set<char> &primaries)
-    {
-        std::set<int> used_digits{};
-        for (auto &token : tokens)
+        for (int j = static_cast<int>(final_elem.length()) - 1; j >= 0; --j)
         {
-            if (primaries.count(token.first))
-            {
-                // the token is primary, we assign 1 - 9
-                for (int i = 1; i <= 9; ++i)
-                {
-                    if (!used_digits.count(i))
-                    {
-                        token.second = i;
-                        used_digits.insert(i);
-                        break;
-                    }
-                }
-            }
-            else
-            {
-                // the token isn't primary, we assign 0 - 9
-                for (int i = 0; i <= 9; ++i)
-                {
-                    if (!used_digits.count(i))
-                    {
-                        token.second = i;
-                        used_digits.insert(i);
-                        break;
-                    }
-                }
-            }
+            char c = final_elem[j];
+            tokens.at(c).weight -= multiplier;
+            multiplier *= 10;
         }
     }
 
-    std::vector<int> convert_puzzle_to_nums(
-        const letter_value_map_t &tokens,
-        const std::vector<std::string> &elements)
+    bool evaluate_puzzle(const token_map_t &tokens)
     {
-        std::vector<int> numbers{};
-        for (std::string elem : elements)
+        long long total = 0;
+        for (const auto &[letter, token_data] : tokens)
         {
-            std::string num_string{};
-            for (size_t i = 0; i < elem.length(); ++i)
-            {
-                char ch = elem.at(i);
-                num_string += std::to_string(tokens.at(ch));
-            }
-            numbers.emplace_back(std::stoi(num_string));
+            total += token_data.value * token_data.weight;
         }
 
-        return numbers;
-    }
-
-    bool evaluate_puzzle(const letter_value_map_t &tokens, const std::vector<std::string> &elements)
-    {
-        auto numbers = convert_puzzle_to_nums(tokens, elements);
-        int expected = numbers.back();
-        numbers.pop_back();
-
-        int sum{0};
-        for (int num : numbers)
-        {
-            sum += num;
-        }
-
-        if (sum == expected)
-        {
-            return true;
-        }
-
-        return false;
+        return total == 0;
     }
 
     bool search(
         const std::set<char>::const_iterator &current_it,
         const std::set<char> &unique_letters,
-        letter_value_map_t &tokens,
+        token_map_t &tokens,
         const std::set<char> &primaries,
         std::vector<bool> &used_digits,
         const std::vector<std::string> &elements)
@@ -195,7 +147,7 @@ namespace alphametics
         // base case, the puzzle evaluates
         if (current_it == unique_letters.end())
         {
-            return evaluate_puzzle(tokens, elements);
+            return evaluate_puzzle(tokens);
         }
 
         // otherwise, get which letter is being worked on
@@ -215,7 +167,7 @@ namespace alphametics
                 continue;
             }
 
-            tokens[current_letter] = digit;
+            tokens[current_letter].value = digit;
             used_digits[digit] = true;
 
             auto next_it = current_it;
@@ -232,8 +184,18 @@ namespace alphametics
         return false;
     }
 
+    puzzle_result_t format_result(const token_map_t &tokens)
+    {
+        puzzle_result_t result;
+        for (const auto &[character, data] : tokens)
+        {
+            result[character] = data.value;
+        }
+        return result;
+    }
+
     // solve function
-    std::optional<letter_value_map_t> solve(std::string puzzle)
+    std::optional<puzzle_result_t> solve(std::string puzzle)
     {
         auto elements = split_puzzle(puzzle);
         auto primaries = get_primaries(elements);
@@ -242,11 +204,10 @@ namespace alphametics
 
         std::vector<bool> used_digits(10, false);
 
-        // initialise_token_values(tokens, primaries);
-
+        generate_token_weights(tokens, elements);
         if (search(unique_letters.begin(), unique_letters, tokens, primaries, used_digits, elements))
         {
-            return tokens;
+            return format_result(tokens);
         }
 
         return std::nullopt;
